@@ -1,6 +1,6 @@
 [project]
 name = "nonebot-plugin-trumpwatcher"
-version = "1.0.1"
+version = "1.0.2"
 description = "监控特朗普 Truth Social 动态并推送到订阅群"
 authors = [
     {name = "StuGRua", email = "stug_iii@foxmail.com"},
@@ -32,13 +32,16 @@ Homepage = "https://github.com/StuGRua/nonebot-plugin-trumpwatcher"
 Repository = "https://github.com/StuGRua/nonebot-plugin-trumpwatcher"
 Documentation = "https://github.com/StuGRua/nonebot-plugin-trumpwatcher#readme"
 
+[project.entry-points."nonebot.plugin"]
+nonebot-plugin-trumpwatcher = "nonebot_plugin_trumpwatcher"
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "nonebot-plugin-trumpwatcher"
-version = "1.0.1"
+version = "1.0.2"
 description = "监控特朗普 Truth Social 动态并推送到订阅群"
 authors = ["StuGRua <stugd@example.com>"]
 license = "MIT"
@@ -55,6 +58,9 @@ nonebot-adapter-onebot = "^2.4.0"
 nonebot-plugin-orm = "^0.8.0"
 nonebot-plugin-apscheduler = "^0.4.0"
 httpx = "^0.27.0"
+
+[tool.poetry.plugins."nonebot.plugin"]
+nonebot-plugin-trumpwatcher = "nonebot_plugin_trumpwatcher"
 
 [tool.nonebot]
 plugins = ["nonebot_plugin_trumpwatcher"]
