@@ -40,36 +40,40 @@ def _collect_image_urls(media: tuple[str, ...]) -> list[str]:
     return image_urls[:max_images]
 
 
-def _build_user_content(source_text: str, image_urls: list[str]) -> str | list[dict[str, Any]]:
-    if not image_urls:
-        return source_text
-    content: list[dict[str, Any]] = [{"type": "text", "text": source_text}]
-    content.extend(
-        {"type": "image_url", "image_url": {"url": image_url}} for image_url in image_urls
-    )
-    return content
+def _build_input(source_text: str, image_urls: list[str]) -> list[dict[str, Any]]:
+    """构建 /v1/responses 接口所需的 input 消息数组（带 role）。"""
+    user_content: list[dict[str, Any]] = [{"type": "input_text", "text": source_text}]
+    for image_url in image_urls:
+        user_content.append({"type": "input_image", "image_url": image_url})
+    return [
+        {"role": "system", "content": [{"type": "input_text", "text": _SYSTEM_PROMPT}]},
+        {"role": "user", "content": user_content},
+    ]
 
 
 def _extract_content(payload: dict[str, Any]) -> str | None:
-    choices = payload.get("choices")
-    if not isinstance(choices, list) or not choices:
+    """从 /v1/responses 响应中提取文本内容。"""
+    output = payload.get("output")
+    if not isinstance(output, list) or not output:
         return None
-    message = choices[0].get("message")
-    if not isinstance(message, dict):
-        return None
-    content = message.get("content")
-    if isinstance(content, str):
-        return content.strip() or None
-    if isinstance(content, list):
-        parts: list[str] = []
-        for item in content:
-            if not isinstance(item, dict):
+    parts: list[str] = []
+    for item in output:
+        if not isinstance(item, dict):
+            continue
+        # output 项类型为 message
+        if item.get("type") != "message":
+            continue
+        content = item.get("content")
+        if not isinstance(content, list):
+            continue
+        for block in content:
+            if not isinstance(block, dict):
                 continue
-            text = item.get("text")
-            if isinstance(text, str) and text.strip():
-                parts.append(text.strip())
-        return "\n".join(parts).strip() or None
-    return None
+            if block.get("type") == "output_text":
+                text = block.get("text", "")
+                if isinstance(text, str) and text.strip():
+                    parts.append(text.strip())
+    return "\n".join(parts).strip() or None
 
 
 async def _request_summary(source_text: str, image_urls: list[str]) -> str | None:
@@ -77,14 +81,11 @@ async def _request_summary(source_text: str, image_urls: list[str]) -> str | Non
     if not api_key:
         return None
 
-    url = f"{config.trumpwatcher_ai_api_base.rstrip('/')}/chat/completions"
-    payload = {
+    url = f"{config.trumpwatcher_ai_api_base.rstrip('/')}/responses"
+    payload: dict[str, Any] = {
         "model": config.trumpwatcher_ai_model,
         "temperature": config.trumpwatcher_ai_temperature,
-        "messages": [
-            {"role": "system", "content": _SYSTEM_PROMPT},
-            {"role": "user", "content": _build_user_content(source_text, image_urls)},
-        ],
+        "input": _build_input(source_text, image_urls),
     }
     try:
         async with httpx.AsyncClient(timeout=config.trumpwatcher_ai_timeout) as client:
